@@ -1,0 +1,128 @@
+---
+title: "Data Science Capstone Project - Milestone Report"
+author: "João Martins"
+date: "September 4th, 2016"
+output: html_document
+---
+
+<style type="text/css">
+.table {
+    width: 73%;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The Data Science Capstone Project aims to build a model for text input prediction, as seen today on modern smartphones.
+
+This report is a brief summary for the initial stages of the project; it describes the origin of the source data, the pre-processing done so far, and a brief exploratory analysis. It concludes with an overall plan on how to proceed with the final prediction algorithm and application.
+
+## Data origin
+
+The data used to build the prediction algorith comes from the course materials, as downloaded from `https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip`.
+
+## Data processing
+
+The data was processed using the `quanteda` package. A small (1%) random sample of the full english language corpus was used to perform the exploratory analysis (the sampling was performed using the `LaF` package's `sample_lines` function), since the full dataset is quite large and takes a long time to process.
+
+The sample was loaded, fully converted to lower case, and then converted into stemmed 1-, 2- and 3-gram frequency matrixes. These contain, for all the text in the corpus, the frequencies of every individual words, two-word and three-word sets.
+
+Because the overall objective is to build an input text predictor, the usual stopword removal (that removes extremely common words like "the", "or", etc.) was not performed, since regular text input by a human will include them.
+
+## Exploratory analysis
+
+The table below shows a high-level summary of the sampled portion of the corpus, showing the number of distinct words (types), the total number of words (tokens) and the number of sentences.
+
+```{r, echo=FALSE, message=FALSE, label = "loadDataAndDisplaySummary" }
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(dplyr)
+library(data.table)
+
+setwd(
+    "D:/onedrive/OneDrive - Nokia/Training/Coursera/Data Science Specialization/Capstone Project"
+)
+
+load("allData.Rdata")
+
+kable(corpSummary)
+```
+
+
+```{r echo=FALSE, label="buildPlots"}
+
+plot.cFreq.top <- function(cFreq, top.n) {
+    g <- ggplot(head(cFreq, top.n), aes(feature.by.freq, frequency)) + geom_bar(stat = "identity")
+    
+    g
+}
+
+plot.cFreq.byRank <- function(cFreq, top.n, logScale = FALSE) {
+    a <- aes(rank, frequency)
+    
+    if (logScale) {
+        a <- aes(log(rank), log(frequency))
+    }
+    
+    g <- ggplot(head(cFreq, top.n), a) + geom_point()
+    
+    g
+}
+
+t1 <- plot.cFreq.top(cFreq.1gram, 10)
+t2 <- plot.cFreq.top(cFreq.2gram, 10)
+t3 <- plot.cFreq.top(cFreq.3gram, 10)
+
+r1 <- plot.cFreq.byRank(cFreq.1gram, 1000, TRUE)
+r2 <- plot.cFreq.byRank(cFreq.2gram, 1000, TRUE)
+r3 <- plot.cFreq.byRank(cFreq.3gram, 1000, TRUE)
+
+```
+
+The sample was subsequently tokenized, stemmed and turned into a feature frequency matrix, listing out the frequencis of individual n-grams. This set of graphs shows the frequency of the top 10 features in the whole corpus, for uni-, bi- and tri-grams, respectively.
+
+```{r, echo = FALSE, label = "Top10Graph"}
+grid.arrange(grobs = list(t1, t2, t3), 
+             nrow = 3, 
+             top = "Frequency of top 10 features (1-,2-,3- grams)")
+```
+
+We can see already some interesting patterns. The most frequent individual words, and combinations of words, are unsurprisingly formed by the most common English words, like "the", "a", "to", etc. While important for building a model that outputs reasonably correct, well structured sentences, it also means that some "depth" must be acocunted for when using the frequency as an indicator for selecting which n-grams to take to feed / train the model.
+
+An interesting way to look at the data is to plot the frequency of n-grams against their rank (lower rank meaning higher frequency). By doing this in a log scale, we can see that a nearly straight slope appears, suggesting that frequency drops by half when going from more to less frequent ngrams.
+
+```{r, echo = FALSE, label = "Frequency x Rank"}
+grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by rank, log scale")
+```
+
+This effect is demonstrated in the table below, where the number of n-grams required to cover 50%, 90% and 100% of all different words found in the sample is shown.
+
+```{r, echo=FALSE, label="wfreq"}
+# rework this in original...
+kable(bind_rows(transpose(wrdCov.1gram)[2, ], 
+                transpose(wrdCov.2gram)[2, ], 
+                transpose(wrdCov.3gram)[2, ]) %>% 
+          transmute(fifty=V1, ninety=V2, hundred=V3) %>% 
+          mutate(ngram = seq(1:3)) %>% 
+          select(4,1,2,3) %>%
+          mutate(fifty=as.numeric(fifty), ninety=as.numeric(ninety), hundred=as.numeric(hundred)) %>%
+          mutate(ninety.vs.full = round((ninety / hundred) * 100, 2)))
+```
+
+
+It is intersting to note that a mere ~3500 word list is enough to cover 90% of the words found in the sample. The last column shows the ratio between the 90% coverage and 100% coverage; even for tri-grams, the savings can be substantial.
+
+This indicates that, potentially,  very substantial savings can be attained with very small losses in predictive power.
+
+## Next steps
+
+The goal is to take the frequency information outlined above, and use that for a very straightforward probabilistic model that outputs the most likely candidates given some previous input; this likelyhood is computed from the frequencies shown above.
+
+The most conventional step to try is arrange the probabilities as a series of Markov Chains, and calculate a transition matrix, with each individual word being a state, and each `(x,y)` entry in the matrix being the probability that word `x` is followed by word `y`. This can be extended to 3-grams by considering a 2-gram as a state.
+
+Naturally, such a matrix will be extremely large, so the main challenges to tackle will be not only its computation in a reasonable time (a few hours at most, to allow for a good pace in developing and fine-tuning the model), but especially in a memory-efficient representation that still allows it to be searched in a very short time (a few milliseconds, i.e., so that it appears to be "real-time" to a human user).
