@@ -1,2 +1,2 @@
-# datascience
-Repository for Data Science stuff
+# Data Science Capstone Project
+Repository for the Coursera Data Science Capstone Project
