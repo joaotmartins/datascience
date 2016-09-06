@@ -1,5 +1,5 @@
 library(LaF)
-library(parallel)
+library(doParallel)
 library(quanteda)
 library(data.table)
 library(dplyr)
@@ -110,13 +110,21 @@ sampleOriginalFiles()
 
 corpus <- loadSampleCorpus()
 
-cl <- makeCluster(detectCores())
-
 corpSummary <- summary(corpus)
 
-docFM.1gram <- calcDFM(corpus, 1)
-docFM.2gram <- calcDFM(corpus, 2)
-docFM.3gram <- calcDFM(corpus, 3) 
+registerDoParallel(cores = 4)
+
+ptime2 <- system.time({
+  res <- foreach(i=1:3, .combine=c) %do% {
+    calcDFM(corpus, i)
+  }
+})[3]
+
+stopImplicitCluster()
+
+#docFM.1gram <- calcDFM(corpus, 1)
+#docFM.2gram <- calcDFM(corpus, 2)
+#docFM.3gram <- calcDFM(corpus, 3) 
 
 cFreq.1gram <- calcCorpusFreq(docFM.1gram)
 cFreq.2gram <- calcCorpusFreq(docFM.2gram)
@@ -126,7 +134,6 @@ wrdCov.1gram <- findWordCoverages(cFreq.1gram)
 wrdCov.2gram <- findWordCoverages(cFreq.2gram)
 wrdCov.3gram <- findWordCoverages(cFreq.3gram)
 
-stopCluster(cl)
 
 # if (!file.exists("allData.Rdata")) {
 #   save(docFM.1gram, docFM.2gram, docFM.3gram, 

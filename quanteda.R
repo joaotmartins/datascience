@@ -1,5 +1,4 @@
 library(LaF)
-library(parallel)
 library(quanteda)
 library(data.table)
 library(dplyr)
@@ -7,6 +6,9 @@ library(slam)
 library(ggplot2)
 library(grid)
 library(gridExtra)
+library(doParallel)
+
+registerDoParallel(cores = 4)
 
 set.seed(928374239)
 
@@ -108,15 +110,25 @@ plot.cFreq.byRank <- function(cFreq, top.n, logScale = FALSE) {
     g
 }
 
+
+
 sampleOriginalFiles()
 
 corpus <- loadSampleCorpus()
 
 corpSummary <- summary(corpus)
 
-docFM.1gram <- calcDFM(corpus, 1)
-docFM.2gram <- calcDFM(corpus, 2)
-docFM.3gram <- calcDFM(corpus, 3) 
+stime <- system.time({
+res <- foreach(i = 1:3, .combine = c, .packages = "quanteda") %do% {
+    calcDFM(corpus, i)
+}
+})
+
+stopImplicitCluster()
+
+#docFM.1gram <- calcDFM(corpus, 1)
+#docFM.2gram <- calcDFM(corpus, 2)
+#docFM.3gram <- calcDFM(corpus, 3) 
 
 cFreq.1gram <- calcCorpusFreq(docFM.1gram)
 cFreq.2gram <- calcCorpusFreq(docFM.2gram)
