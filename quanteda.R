@@ -8,8 +8,7 @@ library(grid)
 library(gridExtra)
 library(doParallel)
 
-registerDoParallel(cores = 4)
-
+# for reproduceability
 set.seed(928374239)
 
 setwd(
@@ -42,8 +41,8 @@ calcDFM <- function(corpus, n_gram = 1) {
     docFM <- dfm(corpus, 
                  toLower = TRUE,
                  removeNumbers = TRUE,
-                 removePunct = TRUE, 
-                 stem = TRUE, 
+                 removePunct = TRUE,
+                 removeURL = TRUE,
                  removeSeparators = TRUE,
                  language = "english",
                  ngrams = n_gram)
@@ -59,7 +58,7 @@ calcCorpusFreq <- function(docFM) {
     
     dt <- data.table(feature = names(term_sums), frequency = term_sums)
     dt <- arrange(dt, desc(frequency))
-    dt$feature.by.freq <- factor(dt$feature, levels = dt$feature)
+    dt$feature <- factor(dt$feature, levels = dt$feature)
     dt$rank <- seq(1:length(dt$frequency))
     dt <- mutate(dt, pct_full = frequency / total_features)
     
@@ -93,7 +92,9 @@ findWordCoverages <- function(df) {
 }
 
 plot.cFreq.top <- function(cFreq, top.n) {
-    g <- ggplot(head(cFreq, top.n), aes(feature.by.freq, frequency)) + geom_bar(stat = "identity")
+    g <- ggplot(head(cFreq, top.n), aes(feature, frequency)) + 
+        geom_bar(stat = "identity") +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
     
     g
 }
@@ -118,17 +119,17 @@ corpus <- loadSampleCorpus()
 
 corpSummary <- summary(corpus)
 
-stime <- system.time({
-res <- foreach(i = 1:3, .combine = c, .packages = "quanteda") %do% {
+registerDoParallel(cores = 4)
+
+res <- foreach(i = 1:3, .combine = c, .packages = "quanteda") %dopar% {
     calcDFM(corpus, i)
 }
-})
 
 stopImplicitCluster()
 
-#docFM.1gram <- calcDFM(corpus, 1)
-#docFM.2gram <- calcDFM(corpus, 2)
-#docFM.3gram <- calcDFM(corpus, 3) 
+docFM.1gram <- res[[1]]
+docFM.2gram <- res[[2]]
+docFM.3gram <- res[[3]]
 
 cFreq.1gram <- calcCorpusFreq(docFM.1gram)
 cFreq.2gram <- calcCorpusFreq(docFM.2gram)
@@ -157,3 +158,5 @@ r2 <- plot.cFreq.byRank(cFreq.2gram, 1000, TRUE)
 r3 <- plot.cFreq.byRank(cFreq.3gram, 1000, TRUE)
 
 grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by rank, log scale")
+
+#dfm(tokenize(paste0('_S_ ', paste0(t[[1]], ' _E_')), removePunct = TRUE, ngrams = 2), toLower = TRUE)
