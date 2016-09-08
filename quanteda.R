@@ -15,7 +15,51 @@ setwd(
     "D:/onedrive/OneDrive - Nokia/Training/Coursera/Data Science Specialization/Capstone Project"
 )
 
-sampleOriginalFiles <- function() {
+
+splitCorpus <- function(trainPct, testPct, validationPct) {
+    if (round((trainPct + testPct + validationPct), 1) != 1.0) {
+        stop("Given percentages don't add up to 100%")
+    }
+    
+    
+    drs <- c("train", "test", "validation")
+    pcts <- c(trainPct, testPct, validationPct)
+    crp <- list(list(f.name = "final/en_US/en_US.blogs.txt", f.lines = 899288),
+                list(f.name = "final/en_US/en_US.news.txt", f.lines = 1010242),
+                list(f.name = "final/en_US/en_US.twitter.txt", f.lines = 2360148))
+    
+    lapply(drs, function(d) {
+        if (! dir.exists(d)) { dir.create(d) }
+    })
+    
+    lapply(crp, function(fs, pts, pcts) {
+        c <- file(fs$f.name)
+        
+        for (i in 1:3) {
+            out <- paste0(pts[i], "/", basename(fs$f.name))
+            rval <- list(set.name = pts[i], f.name = out, f.lines =  fs$f.lines * pcts[i])
+            
+            if (exists("r")) {
+                r <- list(r, rval)
+            } else {
+                r <- rval
+            }
+            
+            if (! file.exists(out)) {
+                print(out)
+                writeLines(readLines(c, n = fs$f.lines * pcts[i]), out)
+            }
+        }
+        
+        close(c)
+        
+        list(f.orig.name = fs$f.name, f.orig.lines = fs$f.lines, sets = r)
+        
+    },  drs, pcts)
+}
+
+
+sampleTrainFiles <- function() {
     samp.pct <- 0.001
     
     smpl_f <- function(orig_file, dest_file, s_lines, tot_lines) {
@@ -25,9 +69,9 @@ sampleOriginalFiles <- function() {
         }
     }
     
-    smpl_f("final/en_US/en_US.blogs.txt", "blogs.txt", samp.pct * 899288, 899288)
-    smpl_f("final/en_US/en_US.news.txt", "news.txt", samp.pct * 1010242, 1010242)
-    smpl_f("final/en_US/en_US.twitter.txt", "tweets.txt", samp.pct * 2360148, 2360148)
+    smpl_f("train/en_US.blogs.txt", "blogs.txt", samp.pct * 899288, 899288)
+    smpl_f("train/en_US.news.txt", "news.txt", samp.pct * 1010242, 1010242)
+    smpl_f("train/en_US.twitter.txt", "tweets.txt", samp.pct * 2360148, 2360148)
 }
 
 loadSampleCorpus <- function() {
