@@ -15,71 +15,16 @@ setwd(
     "D:/onedrive/OneDrive - Nokia/Training/Coursera/Data Science Specialization/Capstone Project"
 )
 
-
-splitCorpus <- function(trainPct, testPct, validationPct) {
-    if (round((trainPct + testPct + validationPct), 1) != 1.0) {
-        stop("Given percentages don't add up to 100%")
-    }
+simpleLC <- function() {
+    sample.pct <- 0.001
+    l1 <- sample_lines("final/en_US/en_US.blogs.txt", n = 899288 * sample.pct, nlines = 899288)
+    l2 <- sample_lines("final/en_US/en_US.news.txt", n = 1010242 * sample.pct, nlines = 1010242)
+    l3 <- sample_lines("final/en_US/en_US.twitter.txt", n = 2360148 * sample.pct, nlines = 2360148)
     
-    
-    drs <- c("train", "test", "validation")
-    pcts <- c(trainPct, testPct, validationPct)
-    crp <- list(list(f.name = "final/en_US/en_US.blogs.txt", f.lines = 899288),
-                list(f.name = "final/en_US/en_US.news.txt", f.lines = 1010242),
-                list(f.name = "final/en_US/en_US.twitter.txt", f.lines = 2360148))
-    
-    lapply(drs, function(d) {
-        if (! dir.exists(d)) { dir.create(d) }
-    })
-    
-    lapply(crp, function(fs, pts, pcts) {
-        c <- file(fs$f.name)
-        
-        for (i in 1:3) {
-            out <- paste0(pts[i], "/", basename(fs$f.name))
-            rval <- list(set.name = pts[i], f.name = out, f.lines =  fs$f.lines * pcts[i])
-            
-            if (exists("r")) {
-                r <- list(r, rval)
-            } else {
-                r <- rval
-            }
-            
-            if (! file.exists(out)) {
-                print(out)
-                writeLines(readLines(c, n = fs$f.lines * pcts[i]), out)
-            }
-        }
-        
-        close(c)
-        
-        list(f.orig.name = fs$f.name, f.orig.lines = fs$f.lines, sets = r)
-        
-    },  drs, pcts)
+    corpus(c(l1,l2,l3))
 }
 
 
-sampleTrainFiles <- function() {
-    samp.pct <- 0.001
-    
-    smpl_f <- function(orig_file, dest_file, s_lines, tot_lines) {
-        if (! file.exists(dest_file)) {
-            s <- sample_lines(orig_file, s_lines, tot_lines)
-            writeLines(s, dest_file)
-        }
-    }
-    
-    smpl_f("train/en_US.blogs.txt", "blogs.txt", samp.pct * 899288, 899288)
-    smpl_f("train/en_US.news.txt", "news.txt", samp.pct * 1010242, 1010242)
-    smpl_f("train/en_US.twitter.txt", "tweets.txt", samp.pct * 2360148, 2360148)
-}
-
-loadSampleCorpus <- function() {
-    samp_files <- textfile("*.txt")
-    corpus <- corpus(samp_files)
-    
-    corpus
-}
 
 calcDFM <- function(corpus, n_gram = 1) {
     docFM <- dfm(corpus, 
@@ -100,14 +45,64 @@ calcCorpusFreq <- function(docFM) {
     term_sums <- col_sums(docFM)
     total_features <- sum(term_sums)
     
-    dt <- data.table(feature = names(term_sums), frequency = term_sums)
-    dt <- arrange(dt, desc(frequency))
-    dt$feature <- factor(dt$feature, levels = dt$feature)
+    dt <- data.table(feature = names(term_sums), frequency = term_sums) %>%
+        arrange(desc(frequency)) %>%
+        mutate(pct_full = frequency / total_features)
+    
     dt$rank <- seq(1:length(dt$frequency))
-    dt <- mutate(dt, pct_full = frequency / total_features)
+    
+    if (length(unlist(strsplit(dt[1,1], '_'))) == 1) {
+        # unigram
+        dt <- mutate(dt, Last = "", Pref = "") %>% 
+            mutate(Prob = frequency / sum(frequency))
+    } else {
+        # ngram
+        dt$Last <- unname(sapply(dt[, 1], 
+                                 function(x) { 
+                                     last(unlist(strsplit(x, '_')))
+                                 }
+                                 )
+                          )
+        dt$Pref <- unname(sapply(dt[, 1],
+                                 function(x) {
+                                     s <- unlist(strsplit(x, '_'))
+                                     s <- s[1:(length(s)-1)]
+                                     paste0(s, collapse = '_')
+                                 }))
+    }
     
     dt
 }
+
+# calculates the MLE probability for a table of n-grams, given
+# the table for (n-1)-grams
+calcMLEProb <- function(freqN, freqN_1) {
+    clc_prob <- function (p, f) {
+        
+        ret <- list()
+        
+        for(i in 1:length(p)) {
+            n_1_f <- filter(freqN_1, feature == p[i])['frequency']
+            r <- 0
+            
+            if (dim(n_1_f)[1] > 0 && n_1_f[1,1] != 0) {
+                 r <- f[i] / n_1_f[1,1]
+            }
+            
+            ret[length(ret) + 1] <- r
+            
+            # print(paste0("Prefix: ", p[i], 
+            #              ", frequency: ", f[i], 
+            #              ", n-1 count: ", n_1_f, 
+            #              ", prob: ", ret[i]))
+        }
+        
+        unlist(ret)
+    }
+
+    freqN <- freqN %>% mutate(Prob = clc_prob(Pref, frequency))
+}
+
 
 # find the indexes (how many words) needed to cover 50% and 90% of all words in the data
 findWordCoverages <- function(df) {
@@ -156,32 +151,33 @@ plot.cFreq.byRank <- function(cFreq, top.n, logScale = FALSE) {
 }
 
 
-
-sampleOriginalFiles()
-
-corpus <- loadSampleCorpus()
+corpus <- simpleLC()
 
 corpSummary <- summary(corpus)
 
-registerDoParallel(cores = 4)
+cl <- makeCluster(4)
+registerDoParallel(cl)
 
-res <- foreach(i = 1:3, .combine = c, .packages = "quanteda") %dopar% {
+docFM <- foreach(i = 1:4, .combine = c, .packages = "quanteda") %dopar% {
     calcDFM(corpus, i)
 }
 
-stopImplicitCluster()
+cFreq <- foreach(i = 1:4, 
+                 .packages = c("quanteda", "slam", "data.table", "dplyr")) %dopar% {
+    calcCorpusFreq(res[[i]])
+}
 
-docFM.1gram <- res[[1]]
-docFM.2gram <- res[[2]]
-docFM.3gram <- res[[3]]
+pr <- foreach(i = 2:4, .packages = "dplyr") %dopar% {
+    calcMLEProb(cFreq[[i]], cFreq[[i-1]])
+}
 
-cFreq.1gram <- calcCorpusFreq(docFM.1gram)
-cFreq.2gram <- calcCorpusFreq(docFM.2gram)
-cFreq.3gram <- calcCorpusFreq(docFM.3gram)
+stopCluster(cl)
 
-wrdCov.1gram <- findWordCoverages(cFreq.1gram)
-wrdCov.2gram <- findWordCoverages(cFreq.2gram)
-wrdCov.3gram <- findWordCoverages(cFreq.3gram)
+#wrdCov.1gram <- findWordCoverages(cFreq.1gram)
+#wrdCov.2gram <- findWordCoverages(cFreq.2gram)
+#wrdCov.3gram <- findWordCoverages(cFreq.3gram)
+#wrdCov.4gram <- findWordCoverages(cFreq.4gram)
+
 
 if (!file.exists("allData.Rdata")) {
     save(docFM.1gram, docFM.2gram, docFM.3gram, 
@@ -191,16 +187,46 @@ if (!file.exists("allData.Rdata")) {
          file = "allData.Rdata")
 }
 
-t1 <- plot.cFreq.top(cFreq.1gram, 10)
-t2 <- plot.cFreq.top(cFreq.2gram, 10)
-t3 <- plot.cFreq.top(cFreq.3gram, 10)
+guess_word <- function(phrase, ngrams) {
+    toks <- tokenize(toLower(phrase), 
+                     removePunct = TRUE,
+                     removeURL = TRUE)[[1]]
+    
+    r <- data.frame(Last = character(), Prob = numeric(), Pref = character())
+    
+    start.len <- min(length(ngrams), length(toks))
+    
+    print(toks)
+    print(start.len)
+    
+    for (i in start.len:1) {
+        pref <- paste0(toks[(length(toks)-i+1):length(toks)], collapse = '_')
+        
+        #print(paste0("going to test \'", pref, "\' on iteration ", i))
+        
+        g <- filter(ngrams[[i]], Pref == pref) %>% select(Last, Prob, Pref)
+        
+        #print(paste0("Results: ", dim(g)[1]))
+        
+        r <- rbind(r,g)
+    }
+    
+    arrange(r, desc(Prob), desc(Pref))
+}
 
-grid.arrange(grobs = list(t1, t2, t3), nrow = 3, top = "Frequency of top 10 features (1-,2-,3- grams)")
 
-r1 <- plot.cFreq.byRank(cFreq.1gram, 1000, TRUE)
-r2 <- plot.cFreq.byRank(cFreq.2gram, 1000, TRUE)
-r3 <- plot.cFreq.byRank(cFreq.3gram, 1000, TRUE)
+makePlots <- function() {
 
-grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by rank, log scale")
+    t1 <- plot.cFreq.top(cFreq.1gram, 10)
+    t2 <- plot.cFreq.top(cFreq.2gram, 10)
+    t3 <- plot.cFreq.top(cFreq.3gram, 10)
+    
+    grid.arrange(grobs = list(t1, t2, t3), nrow = 3, top = "Frequency of top 10 features (1-,2-,3- grams)")
+    
+    r1 <- plot.cFreq.byRank(cFreq.1gram, 1000, TRUE)
+    r2 <- plot.cFreq.byRank(cFreq.2gram, 1000, TRUE)
+    r3 <- plot.cFreq.byRank(cFreq.3gram, 1000, TRUE)
+    
+    grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by rank, log scale")
+}
 
-#dfm(tokenize(paste0('_S_ ', paste0(t[[1]], ' _E_')), removePunct = TRUE, ngrams = 2), toLower = TRUE)
