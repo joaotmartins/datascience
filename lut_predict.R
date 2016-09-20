@@ -15,7 +15,7 @@ import.luts <- function(table_dir) {
                  col.names = c("W1", "W2", "frequency"))
     
     three <- fread(input = paste0(table_dir, "/p_num_ngram3.csv"),
-                   header = FALSE,
+                   header = FALSE,.
                    stringsAsFactors = FALSE,
                    col.names = c("W1", "W2", "W3", "frequency"))
     
