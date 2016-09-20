@@ -135,31 +135,87 @@ Ngrams <- sapply(seq(1,5), function(n) {
 
 # Guesses the next word in the phrase based on stupid backoff algorithm
 guess_word <- function(in.phrase, freq.tables) {
-    lambda <- 0.04
+    lambda <- 0.4
+    l <- 1
     
-    tok_phrase <- (tokenize_sentences(uniformize_punct(in.phrase)))
+    tok_phrase <- (tokenize_sentences(uniformize_punct(in.phrase)))[[1]]
     
     message("Tokenized phrase: ", tok_phrase)
     
-    s <- max(1, length(tok_phrase[[1]])-3)
-    e <- length(tok_phrase[[1]])
-    ng <- length(tok_phrase[[1]]) - s+2 
+    s <- max(1, length(tok_phrase)-3)
+    e <- length(tok_phrase)
+    ng <- length(tok_phrase) - s+2 
     
-    message("len:", length(tok_phrase[[1]]), " s:", s, " e:", e, " ng:", ng)
+    message("len:", length(tok_phrase), " s:", s, " e:", e, " ng:", ng)
     
-    while(s != e) {
+    cand <- list()
+    score <- list()
+    
+    while(ng > 1 && length(cand) < 5) {
+        message("Iteration.. s:", s, " e:", e, " ng:", ng)
         match.ngram.prefix <- paste0(tok_phrase[s:e], collapse = '_')
-        input.n_1.gram <- paste0(tok_phrase[s:(e-1)], collapse = '_')
      
-        matches.ngram <- filter(freq.tables[[ng]], Pref == match.ngram)
-        matches.n_1.gram <- filter(freq.tables[[ng-1]], ngram == input.n_1.gram)
+        matches.ngram <- filter(freq.tables[[ng]], Prefix == match.ngram.prefix)
+        message("  ...found ", dim(matches.ngram)[1], " ", ng, "-grams that match ", match.ngram.prefix)
         
-        count.match.ngram <- summarise(matches.ngram, c = sum(frequency))[1,1]
         
-        for (i in seq(1, min(5, dim(matches.ngram)[2]))) {
-            score[length(score)+1] <- matches.ngram[1, 'frequency'] /
+        if (dim(matches.ngram)[1] != 0) {
+            
+            # If the n-gram was found, the n-1 gram must be present
+            count.match.n_1.ngram <- filter(freq.tables[[ng-1]], ngram == match.ngram.prefix)[, 'frequency']
+            message("  ...total ocurrences of ", ng-1, "-gram ", match.ngram.prefix, ": ", count.match.n_1.ngram)
+            
+            picked <- 0
+            indx <- 1
+            stp <- FALSE
+            while (stp == FALSE) {
+                c_cand <- matches.ngram[indx, 'Last']
+                
+                if (length(cand[cand == c_cand]) == 0) {
+                    # The candidate word wasn't already picked by a previous iteration
+                    cand[length(cand)+1] <- matches.ngram[indx, 'Last']
+                    score[length(score)+1] <- round(l * matches.ngram[indx, 'frequency'] / count.match.n_1.ngram, 4)
+                    picked <- picked + 1
+                    
+                    message("  ...picked [", indx, "]: ", c_cand, ", score: ", score[length(score)])
+                }
+                
+                indx <- indx + 1
+                
+                if (indx > dim(matches.ngram)[1] || picked == 5) {
+                    # we exausted the list or picked the top 5 from the ngram list
+                    stp <- TRUE
+                }
+            }
         }
         
+        s <- s+1
+        l <- l * lambda
+        ng <- ng-1
     }
     
+    message("Stopped cycle at ", length(cand), " candidates, ", ng+1, "-grams.")
+    
+    # Return only the overall top 5 candidates
+    (data.frame(word = unlist(cand), score = unlist(score)) %>% arrange(desc(score)))[1:5, ]
 }
+
+
+zz <- function(u) {
+    for (i in seq(1, dim(bi)[1])) {
+        ngr <- bi[i, 'ngram']
+        t <- strsplit(ngr, '_')
+        r <- sapply(t, function(z) {
+            u[u$ngram == z, 'ind']
+        })
+        bi[i, 'ngram.num'] <- paste0(r, collapse='_')
+    }
+}
+
+
+
+
+# Rprof("prof")
+# replicate(n=10, guess_word("I have found enlightenment", freqT))
+# Rprof(NULL)
+# summaryRprof("prof")
