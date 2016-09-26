@@ -6,3 +6,7 @@ materials
 work
 originalData
 .Rproj.user
+.classpath
+.project
+.settings
+target
