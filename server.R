@@ -1,4 +1,8 @@
 library(shiny)
+source("lut_predict.R")
+
+luts <- import.luts(".")
+message("LUTs loaded.")
 
 shinyServer(function(input, output) {
     
@@ -6,13 +10,16 @@ shinyServer(function(input, output) {
         if(input$goButton >= 1) {
             isolate({
                 if (nchar(input$in.phrase) != 0) {
-                    input$in.phrase
+                    guess_word(input$in.phrase, luts)
                 } else {
-                    "(nothing)"
+                    data.frame(word = "", score = 0)
                 }
             })
+        } else {
+            data.frame(word = "", score = 0)
         }
+        
     })
     
-    output$pred <- prediction
+    output$pred <- renderTable(prediction())
 })

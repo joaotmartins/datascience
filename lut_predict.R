@@ -7,27 +7,27 @@ import.luts <- function(table_dir) {
     dict <- fread(input = paste0(table_dir, "/p_num_ngram_words.csv"),
                   header = FALSE,
                   stringsAsFactors = FALSE,
-                  col.names = c("word", "index", "frequency"))
+                  col.names = c("word", "index", "frequency")) %>% arrange(desc(frequency))
     
     two <- fread(input = paste0(table_dir, "/p_num_ngram2.csv"),
                  header = FALSE,
                  stringsAsFactors = FALSE,
-                 col.names = c("W1", "W2", "frequency"))
+                 col.names = c("W1", "W2", "frequency")) %>% arrange(desc(frequency))
     
     three <- fread(input = paste0(table_dir, "/p_num_ngram3.csv"),
-                   header = FALSE,.
+                   header = FALSE,
                    stringsAsFactors = FALSE,
-                   col.names = c("W1", "W2", "W3", "frequency"))
+                   col.names = c("W1", "W2", "W3", "frequency")) %>% arrange(desc(frequency))
     
     four <- fread(input = paste0(table_dir, "/p_num_ngram4.csv"),
                   header = FALSE,
                   stringsAsFactors = FALSE,
-                  col.names = c("W1", "W2", "W3", "W4", "frequency"))
+                  col.names = c("W1", "W2", "W3", "W4", "frequency")) %>% arrange(desc(frequency))
     
     five <- fread(input = paste0(table_dir, "/p_num_ngram5.csv"),
                   header = FALSE,
                   stringsAsFactors = FALSE,
-                  col.names = c("W1", "W2", "W3", "W4", "W5", "frequency"))
+                  col.names = c("W1", "W2", "W3", "W4", "W5", "frequency")) %>% arrange(desc(frequency))
     
     list(dict = dict, two = two, three = three, four = four, five = five)
 }
@@ -88,7 +88,7 @@ guess_word <- function(in.phrase, look.up.tables) {
     ng <- length(tok_phrase) - s+2 
     
     match_cand <- sapply(tok_phrase[s:e], function(t) {
-        z <- look.up.tables$dict[look.up.tables$dict$word == t]$index
+        z <- look.up.tables$dict[look.up.tables$dict$word == t, ]$index
         if (identical(z, integer(0))) {
             NA
         } else {
@@ -101,7 +101,7 @@ guess_word <- function(in.phrase, look.up.tables) {
     message("Match cand, cut: ", paste0(match_cand, collapse = '_'))
     
     ng <- length(match_cand)
-    cand <- list()
+    cand_lst <- list()
     score <- list()
     
     if (ng == 4) {
@@ -114,6 +114,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.four_g <- filter(look.up.tables$four,
                                  W1 == match_cand[1],
                                  W2 == match_cand[2],
@@ -121,11 +122,11 @@ guess_word <- function(in.phrase, look.up.tables) {
                                  W4 == match_cand[4])$frequency
             
             for (i in seq(1, dim(cands)[1])) {
-                cand[length(cand)+1] <- 
-                    look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W5']]$word
+                cand_lst[length(cand_lst)+1] <- 
+                    look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W5'], ]$word
                 score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.four_g
                 
-                message("  ... candidate at ", ng+1, "-gram: ", cand[length(cand)], 
+                message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
                         ", score: ", score[length(score)])
             }
         }
@@ -135,7 +136,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
-    if (ng == 3 && length(cand) < 5) {
+    if (ng == 3 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$four,
                         W1 == match_cand[1],
                         W2 == match_cand[2],
@@ -144,21 +145,22 @@ guess_word <- function(in.phrase, look.up.tables) {
         message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.three_g <- filter(look.up.tables$three,
                                  W1 == match_cand[1],
                                  W2 == match_cand[2],
                                  W3 == match_cand[3])$frequency
             
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W4']]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W4'], ]$word
                 
-                if (length(cand[cand == c]) == 0) {
+                if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
-                    cand[length(cand)+1] <- c
+                    cand_lst[length(cand_lst)+1] <- c
                     score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.three_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand[length(cand)], 
+                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
                             ", score: ", score[length(score)])
                 }
             }
@@ -169,7 +171,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
-    if (ng == 2 && length(cand) < 5) {
+    if (ng == 2 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$three,
                         W1 == match_cand[1],
                         W2 == match_cand[2])
@@ -177,20 +179,21 @@ guess_word <- function(in.phrase, look.up.tables) {
         message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.two_g <- filter(look.up.tables$two,
                                   W1 == match_cand[1],
                                   W2 == match_cand[2])$frequency
             
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W3']]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W3'], ]$word
                 
-                if (length(cand[cand == c]) == 0) {
+                if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
-                    cand[length(cand)+1] <- c
+                    cand_lst[length(cand_lst)+1] <- c
                     score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.two_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand[length(cand)], 
+                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
                             ", freq: ", cands[i, 'frequency'], ", cnt:", cnt.two_g,
                             ", score: ", score[length(score)])
                 }
@@ -202,28 +205,29 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
-    if (ng == 1 && length(cand) < 5) {
+    if (ng == 1 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$two,
                         W1 == match_cand[1])
         
         message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.one_g <- filter(look.up.tables$dict,
                                 index == match_cand[1])$frequency
             
             message("  ...count one: ", cnt.one_g)
             
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W2']]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W2'], ]$word
                 
-                if (length(cand[cand == c]) == 0) {
+                if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
-                    cand[length(cand)+1] <- c
+                    cand_lst[length(cand_lst)+1] <- c
                     score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.one_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand[length(cand)], 
+                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
                             ", score: ", score[length(score)])
                 }
             }
@@ -234,18 +238,8 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
-    message("Stopped at ", length(cand), " candidates, ", ng+1, "-grams.")
+    message("Stopped at ", length(cand_lst), " candidates, ", ng+1, "-grams.")
 
     # Return only the overall top 5 candidates
-    (data.frame(word = unlist(cand), score = unlist(score)) %>% arrange(desc(score)))[1:5, ]
+    (data.frame(word = unlist(cand_lst), score = unlist(score)) %>% arrange(desc(score)))[1:5, ]
 }
-
-
-
-
-
-
-
-
-#luts <- import.luts("d:/code/internal_tools/wordParser")
-

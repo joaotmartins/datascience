@@ -17,7 +17,7 @@ shinyUI(fluidPage(
             textInput("in.phrase", "Input phrase"),
             actionButton("goButton", "Predict"),
             p(),
-            textOutput("pred")
+            tableOutput("pred")
         )
     )
 ))
