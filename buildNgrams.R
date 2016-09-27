@@ -1,13 +1,9 @@
-library(hash)
-library(LaF)
 library(quanteda)
-library(data.table)
-library(dplyr)
+library(LaF)
+library(dtplyr)
 library(slam)
-library(ggplot2)
-library(grid)
-library(gridExtra)
-library(doParallel)
+
+source("tokenize.R")
 
 #
 # Processes the original input into n-gram tables, and exports them to disk.
@@ -71,10 +67,19 @@ constructFrequencyTable <- function(docFM) {
 
 # Exports ngrams to .txt files
 export.ngrams <- function(ngrams) {
+    d <- "work/tables"
+    
+    if (! dir.exists(d)) {
+        dir.create(d)
+    }
     
     sapply(seq(1,5), function(g) {
-        write.table(col_sums(ngrams[[g]]), file = paste0("ngram", g, ".txt"), col.names = FALSE)    
+        f <- paste0(d, "/ngram", g, ".txt")
+        write.table(col_sums(ngrams[[g]]), file = f, col.names = FALSE)
+        message("Exported ", f)
     })
+    
+    message("Done exporting.")
 }
 
 
@@ -89,7 +94,7 @@ Ngrams <- sapply(seq(1,5), function(n) {
     t <- system.time({
         d <- calcDFM(toks, n)
     })
-    message("Calculated ", n, "-gram table in ", round(t[3], 2), "seconds.")
+    message("Calculated ", n, "-gram table in ", round(t[3], 2), " seconds.")
     
     d
 })

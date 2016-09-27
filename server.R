@@ -1,7 +1,7 @@
 library(shiny)
 source("lut_predict.R")
 
-luts <- import.luts(".")
+luts <- import.luts("work/tables")
 message("LUTs loaded.")
 
 shinyServer(function(input, output) {
