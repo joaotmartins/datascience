@@ -2,6 +2,14 @@ library(data.table)
 library(dplyr)
 library(quanteda)
 
+source("tokenize.R")
+
+#
+# Functions to predict words based on Look-Up Tables.
+#
+
+
+# Reads-in LUTs from disk.
 import.luts <- function(table_dir) {
     
     dict <- fread(input = paste0(table_dir, "/p_num_ngram_words.csv"),
@@ -32,24 +40,8 @@ import.luts <- function(table_dir) {
     list(dict = dict, two = two, three = three, four = four, five = five)
 }
 
-
-# Make punctuation symbols uniform
-uniformize_punct <- function(input_data) {
-    t <- gsub('’', '\'', input_data)
-    t <- gsub('”|“', '"', t)
-    #t <- gsub('[\\w-]+@([\\w-]+\\.)+[\\w-]+', "", t, perl = TRUE) # emails, should we cut out?
-    t <- gsub('(_)+', ' ', t, perl = TRUE) # cuts out underscores to avoid messing with tokenization
-}
-
-# Split data into words.
-tokenize_sentences <- function(sentences) {
-    tokenize(toLower(sentences),
-             removeNumbers = TRUE,
-             removePunct = TRUE,
-             removeURL = TRUE,
-             removeSymbols = TRUE)
-}
-
+# Cuts unknown words from the given token list.
+# All words before the unknown word are also discarded.
 cut_unknown <- function(word.indexes) {
     r <- list()
     w <- word.indexes
@@ -76,6 +68,7 @@ cut_unknown <- function(word.indexes) {
 
 
 # Guesses the next word in the phrase based on stupid backoff algorithm
+# Assumes given LUTs are ordered by frequency.
 guess_word <- function(in.phrase, look.up.tables) {
     lambda <- 0.4
     l <- 1
@@ -114,13 +107,16 @@ guess_word <- function(in.phrase, look.up.tables) {
         message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
+            # Take the top 5 candidates
             cands <- cands[1:(min(5, dim(cands)[1])), ]
+            # Find the frequency of the matching 4-gram
             cnt.four_g <- filter(look.up.tables$four,
                                  W1 == match_cand[1],
                                  W2 == match_cand[2],
                                  W3 == match_cand[3],
                                  W4 == match_cand[4])$frequency
             
+            # Calculate the score for the candidate match
             for (i in seq(1, dim(cands)[1])) {
                 cand_lst[length(cand_lst)+1] <- 
                     look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W5'], ]$word
@@ -131,6 +127,7 @@ guess_word <- function(in.phrase, look.up.tables) {
             }
         }
         
+        # Prepare the next cycle
         l <- l * lambda
         ng <- ng - 1
         match_cand <- match_cand[2:length(match_cand)]
