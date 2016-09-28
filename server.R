@@ -1,10 +1,13 @@
 library(shiny)
+library(shinyjs)
 source("lut_predict.R")
 
 luts <- import.luts("data")
 message("LUTs loaded.")
 
 shinyServer(function(input, output) {
+    
+    enable("goButton")
     
     prediction <- reactive({
         if(input$goButton >= 1) {
@@ -21,5 +24,5 @@ shinyServer(function(input, output) {
         
     })
     
-    output$pred <- renderTable(prediction())
+    output$pred <- renderTable(prediction(), digits = 4, width = 300)
 })
