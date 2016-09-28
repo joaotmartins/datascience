@@ -40,7 +40,7 @@ public class WordParser {
 	
 	public static void main(String[] args) {
 		String pref1 = "work/tables/ngram";
-		String pref2 = "work/tables/p_num_ngram";
+		String pref2 = "data/p_num_ngram";
 
 		if (args.length != 2) {
 			System.out.println("No filename prefixes given, using defaults.");

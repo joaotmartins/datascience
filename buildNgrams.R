@@ -67,11 +67,14 @@ constructFrequencyTable <- function(docFM) {
 
 # Exports ngrams to .txt files
 export.ngrams <- function(ngrams) {
-    d <- "work/tables"
-    
-    if (! dir.exists(d)) {
-        dir.create(d)
+    cond_create <- function(d) {
+        if (! dir.exists(d)) {
+            dir.create(d)
+        }    
     }
+    
+    cond_create("work/tables")
+    cond_create("data")
     
     sapply(seq(1,5), function(g) {
         f <- paste0(d, "/ngram", g, ".txt")
