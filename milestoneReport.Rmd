@@ -1,6 +1,6 @@
 ---
 title: "Data Science Capstone Project - Milestone Report"
-author: "João Martins"
+author: "Jo?o Martins"
 date: "September 4th, 2016"
 output: html_document
 ---
@@ -37,50 +37,74 @@ Because the overall objective is to build an input text predictor, the usual sto
 
 The table below shows a high-level summary of the sampled portion of the corpus, showing the number of distinct words (types), the total number of words (tokens) and the number of sentences.
 
-```{r, echo=FALSE, message=FALSE, label = "loadDataAndDisplaySummary" }
+```{r, echo=FALSE, message=FALSE, label = "loadDataAndDisplaySummary", cache=TRUE}
 library(ggplot2)
 library(gridExtra)
 library(knitr)
-library(dplyr)
-library(data.table)
 
-setwd(
-    "D:/onedrive/OneDrive - Nokia/Training/Coursera/Data Science Specialization/Capstone Project"
-)
+source("ngrams.R")
 
-load("allData.Rdata")
+# for reproduceability
+set.seed(928374239)
 
-kable(corpSummary)
+## Start
+
+train_data <- sampleTrainData()
+sentences <- make_sentences(train_data)
+toks <- tokenize_sentences(uniformize_punct(sentences))
+Ngrams <- calculate_ngrams(toks)
+
+kable(summary(corpus(sentences)))
 ```
 
 
-```{r echo=FALSE, label="buildPlots"}
+```{r echo=FALSE, label="buildPlots", cache = TRUE}
+library(data.table)
+library(dplyr)
+library(slam)
+
+build_cFreq <- function(docFM) {
+    term_sums <- col_sums(docFM)
+    
+    dt <- data.table(ngram = names(term_sums), frequency = term_sums)
+    dt <- arrange(dt,desc(frequency))
+}
 
 plot.cFreq.top <- function(cFreq, top.n) {
-    g <- ggplot(head(cFreq, top.n), aes(feature.by.freq, frequency)) + geom_bar(stat = "identity")
+    g <- ggplot(head(cFreq, top.n), 
+                aes(x=reorder(ngram, -frequency), y = frequency)) + 
+        geom_bar(stat = "identity") +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+        xlab("N-gram") + ylab("Frequency")
     
     g
 }
 
 plot.cFreq.byRank <- function(cFreq, top.n, logScale = FALSE) {
+    d <- head(cFreq, top.n)
+    d$rank <- seq(1, top.n)
     a <- aes(rank, frequency)
     
     if (logScale) {
         a <- aes(log(rank), log(frequency))
     }
     
-    g <- ggplot(head(cFreq, top.n), a) + geom_point()
+    g <- ggplot(d, a) + geom_point() + xlab("Rank") + ylab("Frequency")
     
     g
 }
 
-t1 <- plot.cFreq.top(cFreq.1gram, 10)
-t2 <- plot.cFreq.top(cFreq.2gram, 10)
-t3 <- plot.cFreq.top(cFreq.3gram, 10)
+cf1 <- build_cFreq(Ngrams[[1]])
+cf2 <- build_cFreq(Ngrams[[2]])
+cf3 <- build_cFreq(Ngrams[[3]])
 
-r1 <- plot.cFreq.byRank(cFreq.1gram, 1000, TRUE)
-r2 <- plot.cFreq.byRank(cFreq.2gram, 1000, TRUE)
-r3 <- plot.cFreq.byRank(cFreq.3gram, 1000, TRUE)
+t1 <- plot.cFreq.top(cf1, 10)
+t2 <- plot.cFreq.top(cf2, 10)
+t3 <- plot.cFreq.top(cf3, 10)
+
+r1 <- plot.cFreq.byRank(cf1, 1000, TRUE)
+r2 <- plot.cFreq.byRank(cf2, 1000, TRUE)
+r3 <- plot.cFreq.byRank(cf3, 1000, TRUE)
 
 ```
 
@@ -102,11 +126,41 @@ grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by 
 
 This effect is demonstrated in the table below, where the number of n-grams required to cover 50%, 90% and 100% of all different words found in the sample is shown.
 
-```{r, echo=FALSE, label="wfreq"}
-# rework this in original...
-kable(bind_rows(transpose(wrdCov.1gram)[2, ], 
-                transpose(wrdCov.2gram)[2, ], 
-                transpose(wrdCov.3gram)[2, ]) %>% 
+```{r, echo=FALSE, label="wfreq", cache = TRUE}
+# find the indexes (how many words) needed to cover 50% and 90% of all words in the data
+findWordCoverages <- function(df) {
+    z<-0
+    x<-0
+    total <- sum(df$frequency)
+    mid <- -1
+    ninety <- -1
+    
+    for (i in df$frequency) { 
+        x <- x + i 
+        if(mid == -1 && x > total/2) { 
+            mid <- z
+        }
+        if (ninety == -1 && x > total * 0.9) {
+            ninety <- z
+            break
+        }
+        z <- z+1;
+    }
+    
+    if (ninety == -1) { ninety <- z }
+    
+    data.table(Coverage = c("50%", "90%", "100%"),
+               Index = c(mid, ninety, length(df$frequency)),
+               Count = c(total * 0.5, total * 0.9, total))
+}
+
+wrdCov_1gram <- findWordCoverages(cf1)
+wrdCov_2gram <- findWordCoverages(cf2)
+wrdCov_3gram <- findWordCoverages(cf3)
+
+kable(bind_rows(transpose(wrdCov_1gram)[2, ], 
+                transpose(wrdCov_2gram)[2, ], 
+                transpose(wrdCov_3gram)[2, ]) %>% 
           transmute(fifty=V1, ninety=V2, hundred=V3) %>% 
           mutate(ngram = seq(1:3)) %>% 
           select(4,1,2,3) %>%
