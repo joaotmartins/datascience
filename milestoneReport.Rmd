@@ -1,6 +1,6 @@
 ---
 title: "Data Science Capstone Project - Milestone Report"
-author: "Jo?o Martins"
+author: "João Martins"
 date: "September 4th, 2016"
 output: html_document
 ---
@@ -37,7 +37,10 @@ Because the overall objective is to build an input text predictor, the usual sto
 
 The table below shows a high-level summary of the sampled portion of the corpus, showing the number of distinct words (types), the total number of words (tokens) and the number of sentences.
 
-```{r, echo=FALSE, message=FALSE, label = "loadDataAndDisplaySummary", cache=TRUE}
+```{r, include=FALSE, message=FALSE, label = "loadDataAndBuildSummary", cache=TRUE}
+library(data.table)
+library(dplyr)
+library(slam)
 library(ggplot2)
 library(gridExtra)
 library(knitr)
@@ -47,21 +50,21 @@ source("ngrams.R")
 # for reproduceability
 set.seed(928374239)
 
-## Start
-
 train_data <- sampleTrainData()
-sentences <- make_sentences(train_data)
-toks <- tokenize_sentences(uniformize_punct(sentences))
-Ngrams <- calculate_ngrams(toks)
+sents <- make_sentences(train_data)
 
-kable(summary(corpus(sentences)))
+s <- summary(corpus(sents), n = length(sents))
+st <- summarise(s, types = sum(Types), tokens = sum(Tokens), sentences = sum(Sentences))
+```
+```{r echo = FALSE, label = "displaySummary", cache = TRUE}
+kable(st)
 ```
 
 
-```{r echo=FALSE, label="buildPlots", cache = TRUE}
-library(data.table)
-library(dplyr)
-library(slam)
+```{r echo=FALSE, message=FALSE, label="buildPlots", cache = TRUE}
+
+toks <- tokenize_sentences(uniformize_punct(sents))
+Ngrams <- calculate_ngrams(toks)
 
 build_cFreq <- function(docFM) {
     term_sums <- col_sums(docFM)
@@ -110,7 +113,7 @@ r3 <- plot.cFreq.byRank(cf3, 1000, TRUE)
 
 The sample was subsequently tokenized, stemmed and turned into a feature frequency matrix, listing out the frequencis of individual n-grams. This set of graphs shows the frequency of the top 10 features in the whole corpus, for uni-, bi- and tri-grams, respectively.
 
-```{r, echo = FALSE, label = "Top10Graph"}
+```{r, echo = FALSE, label = "Top10Graph", cache = TRUE}
 grid.arrange(grobs = list(t1, t2, t3), 
              nrow = 3, 
              top = "Frequency of top 10 features (1-,2-,3- grams)")
@@ -120,7 +123,7 @@ We can see already some interesting patterns. The most frequent individual words
 
 An interesting way to look at the data is to plot the frequency of n-grams against their rank (lower rank meaning higher frequency). By doing this in a log scale, we can see that a nearly straight slope appears, suggesting that frequency drops by half when going from more to less frequent ngrams.
 
-```{r, echo = FALSE, label = "Frequency x Rank"}
+```{r, echo = FALSE, label = "Frequency x Rank", cache = TRUE}
 grid.arrange(grobs = list(r1, r2, r3), nrow = 3, top = "1,2,3-gram frequency by rank, log scale")
 ```
 
@@ -169,7 +172,7 @@ kable(bind_rows(transpose(wrdCov_1gram)[2, ],
 ```
 
 
-It is intersting to note that a mere ~3500 word list is enough to cover 90% of the words found in the sample. The last column shows the ratio between the 90% coverage and 100% coverage; even for tri-grams, the savings can be substantial.
+It is intersting to note that a mere ~7900 word list is enough to cover 90% of the words found in the sample. The last column shows the ratio between the 90% coverage and 100% coverage; even for tri-grams, the savings can be substantial.
 
 This indicates that, potentially,  very substantial savings can be attained with very small losses in predictive power.
 
