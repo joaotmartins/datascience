@@ -30,7 +30,11 @@ the n-gram tables, these are output as `p_num_ngram[2-5].csv`, as well as the
 The shiny application is contained on the `server.R` and `ui.R` files. It uses the functions in 
 `lut_predict.R` to do the actual prediction.
 
-## Common module
-A single common module, `tokenize.R`, is used by the pre-processing and prediction applications. It 
+## Common modules
+The following modules are used:
+
+* `tokenize.R` is used by the pre-processing and prediction applications. It 
 contains the tokenization functions that are applied to both the train data and the inputs provided
 for prediction.
+* `ngrams.R` contains the functions to load data and build n-gram tables. It is used both for 
+pre-processing and in the milestone report.
