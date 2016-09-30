@@ -74,7 +74,7 @@ guess_word <- function(in.phrase, look.up.tables) {
     l <- 1
     
     tok_phrase <- (tokenize_sentences(uniformize_punct(in.phrase)))[[1]]
-    message("Tokenized phrase: ", paste0(tok_phrase, collapse="_"))
+    #message("Tokenized phrase: ", paste0(tok_phrase, collapse="_"))
     
     s <- max(1, length(tok_phrase)-3)
     e <- length(tok_phrase)
@@ -88,10 +88,12 @@ guess_word <- function(in.phrase, look.up.tables) {
             z
         }
     })
-    message("Match cand: ", paste0(match_cand, collapse = '_'))
+    #message("Match cand: ", paste0(match_cand, collapse = '_'))
     
     match_cand <- cut_unknown(match_cand)
-    message("Match cand, cut: ", paste0(match_cand, collapse = '_'))
+    #message("Match cand, cut: ", paste0(match_cand, collapse = '_'))
+    
+    rm(tok_phrase)
     
     ng <- length(match_cand)
     cand_lst <- list()
@@ -102,13 +104,13 @@ guess_word <- function(in.phrase, look.up.tables) {
                         W1 == match_cand[1],
                         W2 == match_cand[2],
                         W3 == match_cand[3],
-                        W4 == match_cand[4])
+                        W4 == match_cand[4]) %>% slice(1:5)
         
-        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
             # Take the top 5 candidates
-            cands <- cands[1:(min(5, dim(cands)[1])), ]
+            #cands <- cands[1:(min(5, dim(cands)[1])), ]
             # Find the frequency of the matching 4-gram
             cnt.four_g <- filter(look.up.tables$four,
                                  W1 == match_cand[1],
@@ -119,11 +121,11 @@ guess_word <- function(in.phrase, look.up.tables) {
             # Calculate the score for the candidate match
             for (i in seq(1, dim(cands)[1])) {
                 cand_lst[length(cand_lst)+1] <- 
-                    look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W5'], ]$word
-                score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.four_g
+                    look.up.tables$dict[look.up.tables$dict$index == cands[i, ]$W5, ]$word
+                score[length(score)+1] <- l * cands[i, ]$frequency / cnt.four_g
                 
-                message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
-                        ", score: ", score[length(score)])
+                #message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
+                #        ", score: ", score[length(score)])
             }
         }
         
@@ -133,32 +135,34 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
+    #message("cand_list has ", length(cand_lst), " elements")
+    
     if (ng == 3 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$four,
                         W1 == match_cand[1],
                         W2 == match_cand[2],
-                        W3 == match_cand[3])
+                        W3 == match_cand[3]) %>% slice(1:5)
         
-        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            cands <- cands[1:(min(5, dim(cands)[1])), ]
+            #cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.three_g <- filter(look.up.tables$three,
                                  W1 == match_cand[1],
                                  W2 == match_cand[2],
                                  W3 == match_cand[3])$frequency
             
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W4'], ]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, ]$W4, ]$word
                 
                 if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
                     cand_lst[length(cand_lst)+1] <- c
-                    score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.three_g
+                    score[length(score)+1] <- l * cands[i, ]$frequency / cnt.three_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
-                            ", score: ", score[length(score)])
+                    #message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
+                    #        ", score: ", score[length(score)])
                 }
             }
         }
@@ -168,31 +172,33 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
+    #message("cand_list has ", length(cand_lst), " elements")
+    
     if (ng == 2 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$three,
                         W1 == match_cand[1],
-                        W2 == match_cand[2])
+                        W2 == match_cand[2]) %>% slice(1:5)
         
-        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            cands <- cands[1:(min(5, dim(cands)[1])), ]
+            #cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.two_g <- filter(look.up.tables$two,
                                   W1 == match_cand[1],
                                   W2 == match_cand[2])$frequency
             
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W3'], ]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, ]$W3, ]$word
                 
                 if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
                     cand_lst[length(cand_lst)+1] <- c
-                    score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.two_g
+                    score[length(score)+1] <- l * cands[i, ]$frequency / cnt.two_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
-                            ", freq: ", cands[i, 'frequency'], ", cnt:", cnt.two_g,
-                            ", score: ", score[length(score)])
+                    #message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
+                    #        ", freq: ", cands[i, ]$frequency, ", cnt:", cnt.two_g,
+                    #        ", score: ", score[length(score)])
                 }
             }
         }
@@ -202,30 +208,30 @@ guess_word <- function(in.phrase, look.up.tables) {
         match_cand <- match_cand[2:length(match_cand)]
     }
     
+    #message("cand_list has ", length(cand_lst), " elements")
+    
     if (ng == 1 && length(cand_lst) < 5) {
         cands <- filter(look.up.tables$two,
-                        W1 == match_cand[1])
+                        W1 == match_cand[1]) %>% slice(1:5)
         
-        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            cands <- cands[1:(min(5, dim(cands)[1])), ]
+            #cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.one_g <- filter(look.up.tables$dict,
                                 index == match_cand[1])$frequency
             
-            message("  ...count one: ", cnt.one_g)
-            
             for (i in seq(1, dim(cands)[1])) {
-                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, 'W2'], ]$word
+                c <- look.up.tables$dict[look.up.tables$dict$index == cands[i, ]$W2, ]$word
                 
                 if (length(cand_lst[cand_lst == c]) == 0) {
                     # candidate word 'c' isn't already picked
                     
                     cand_lst[length(cand_lst)+1] <- c
-                    score[length(score)+1] <- l * cands[i, 'frequency'] / cnt.one_g
+                    score[length(score)+1] <- l * cands[i, ]$frequency / cnt.one_g
                     
-                    message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
-                            ", score: ", score[length(score)])
+                    #message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
+                    #        ", score: ", score[length(score)])
                 }
             }
         }
@@ -234,6 +240,29 @@ guess_word <- function(in.phrase, look.up.tables) {
         ng <- ng - 1
         match_cand <- match_cand[2:length(match_cand)]
     }
+    
+    #message("cand_list has ", length(cand_lst), " elements")
+    
+    if (ng == 0 && length(cand_lst) < 5) {
+        cands <- look.up.tables$dict[1:5, ]
+        
+        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        
+        for (i in seq(1, dim(cands)[1])) {
+            c <- cands[i, ]$word
+            
+            if (length(cand_lst[cand_lst == c]) == 0) {
+                # candidate word 'c' isn't already picked
+                cand_lst[length(cand_lst)+1] <- c
+                score[length(score)+1] <- l * (1 / cands[i, ]$frequency)
+                
+                #message("  ... candidate at ", ng+1, "-gram: ", cand_lst[length(cand_lst)], 
+                #        ", score: ", score[length(score)])
+            }
+        }
+    }
+    
+    #message("cand_list has ", length(cand_lst), " elements")
     
     message("Stopped at ", length(cand_lst), " candidates, ", ng+1, "-grams.")
 
