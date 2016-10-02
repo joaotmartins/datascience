@@ -246,7 +246,7 @@ guess_word <- function(in.phrase, look.up.tables) {
     if (ng == 0 && length(cand_lst) < 5) {
         cands <- look.up.tables$dict[1:5, ]
         
-        message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
+        #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         for (i in seq(1, dim(cands)[1])) {
             c <- cands[i, ]$word

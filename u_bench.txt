@@ -1,0 +1,19 @@
+Micro bench
+Number of predictions:   122
+
+start
+239.51 msec
+
+no message
+237.79 msec
+
+
+1 message, cut 5-grams to > 2 frequency
+141.97 msec
+
+1 message, cut 5-grams and 4-grams to > 2 frequency 
+79.75 msec
+
+
+1 message, cut 5-grams and 4-grams to > 2 frequency, 3-grams to > 1 frequency
+49.34 msec
