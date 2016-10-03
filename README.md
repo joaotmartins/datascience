@@ -1,16 +1,29 @@
 # Data Science Capstone Project
 Repository for the Coursera Data Science Capstone Project
 
+This repository contains the code for an application that predicts the next word given an input 
+phrase. It is the capstone project deliverable.
+
+The application is an R shiny app, that can run locally or on shinyapps.io.
+
+The actual implementation uses a 5-gram model together with the "Stupid Backoff" algorithm from
+[here](http://www.aclweb.org/anthology/D07-1090.pdf).
+
 ## Outline
-There are three main artifacts in the repository:
+These are the main artifacts in the repository:
 
 * An intermediate report that simply analyses the source data.
+* A final report slideset that summarizes the work.
 * A set of pre-processing steps that transform the source data into look-up tables for prediction.
 * A shiny application that predicts words based on the stupid backoff algorithm and the LUTs.
 * A common tokenization module.
 
 ## Intermediate report
 The report is contained in the `milestoneReport.Rmd` R markdown file.
+
+## Final slideset
+The final slideset is contained in the `finalPresentation.Rpres` file; an accompaning .css file
+is also present that tweaks the code display slightly.
 
 ## Pre-processing
 For efficiency, the pre-processing had to be divided into a chain of R, Unix and Java tools; these 
