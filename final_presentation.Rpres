@@ -1,0 +1,77 @@
+Online word prediction application
+========================================================
+author: Joao Martins
+date: October 3rd, 2016
+autosize: true
+## Data Science Capstone Project - Final Presentation
+
+
+
+Introduction
+========================================================
+
+* The objective of this work was to build a web application that, given an input phrase, could predict
+the next word.
+* The application was built in R, and hosted on <http://shinyapps.io>
+* The "Stupid Backoff"^1 algorithm based on up to 5-gram tables was chosen to drive the word prediction.
+* Training of the prediction model was based on a dataset provided by Coursera and SwiftKey^2
+  
+<br/>
+<br/>
+<small>1: Brants, T., Popat, A. C., Xu, P., Och, F. J., and Dean, J. (2007). Large language models in machine translation. In *EMNLP/CoNLL 2007*</small>
+<small>2: <https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip></small>
+
+
+Algorithm used
+========================================================
+In general, n-gram models are the simplest language model that is based on the idea of attributing
+probabilities to sentences. When predicting words, we pick the most probable (in our case, the 5 
+most probable) sentences that have one extra word than the given input. The probabilities are calculated
+as follows:
+
+$$S(w_i|w^{i-1} _{i-k+1}) = \left\{
+\begin{array}{ll}
+\frac{count(w^{i}_{i-k+1})}{count(w^{i-1}_{i-k+1})} & \text{if}~count(w^{i}_{i-k+1}) > 0 \\
+\lambda S(w_{i}|w^{i-1}_{i-k+2}) & \text{otherwise}
+\end{array}
+\right.$$
+
+Here $w^{j}_{i}$ means the words $i$ through $j$ of a sentence, and the function $S(w_{i}|w^{b}_{a})$ computes the
+probability of the sentence $w_{a} ... w_{b} w_{i}$ --- so the $w_{i}$ words that output the 5 
+largest probabilities are our predicted (or candidate) words.
+
+Implementation
+========================================================
+The final implementation uses tables of up to 5-grams and $\lambda = 0.4$ (as suggested in the original paper); higher order n-grams did not increase accuracy and used considerably more RAM.
+The "raw" n-gram and frequency tables, once complete, occupied ~200 MB of RAM in R. Several steps 
+were taken to reduce this:
+* The words in 2,3,4 and 5 -grams were turned into index sequences into the unigram table
+* 3,4 and 5-grams with frequency 2 or 1 were cut out.
+
+These two measures cut the used RAM to ~30MB, and also considerably decreased the execution time from ~2s to ~70 msec, without affecting accuracy.
+Given these numbers, this implementation could be used as a good starting point for an implementation 
+targeted for mobile devices.
+
+
+Final Application
+========================================================
+* The final application can be accessed at <https://joaotmartins.shinyapps.io/Capstone_Project/>; 
+usage instructions are provided in the web page itself.
+* The prediction implementation was benchmarked using a popular tool,  [benchmark.R](https://github.com/hfoffani/dsci-benchmark):
+
+```
+Overall top-3 score:     16.28 %
+Overall top-1 precision: 11.77 %
+Overall top-3 precision: 20.12 %
+Average runtime:         70.16 msec
+Number of predictions:   28464
+Total memory used:       34.82 MB
+
+Dataset details
+ Dataset "blogs" (599 lines, 14587 words, hash 14b3c593e543eb8b2932cf00b646ed653e336897a03c82098b725e6e1f9b7aa2)
+  Score: 16.00 %, Top-1 precision: 11.35 %, Top-3 precision: 19.94 %
+ Dataset "tweets" (793 lines, 14071 words, hash 7fa3bf921c393fe7009bc60971b2bb8396414e7602bb4f409bed78c7192c30f4)
+  Score: 16.55 %, Top-1 precision: 12.19 %, Top-3 precision: 20.30 %
+ ```
+ 
+ * Here we can see that the correct word is within the application's top 3 predictions ~20% of the time, a relatively good performance when compared to other publicly shared benchmarks [(Coursera Data Science Capstone Week 5 thread)](https://www.coursera.org/learn/data-science-project/discussions/weeks/5/threads/1aWTuoCGEeakbhIiKPxV8w).
