@@ -18,11 +18,16 @@ sampleTrainData <- function(sample.pct = 0.1) {
                list(f = "work/train/en_US.news.txt", nl = 605768),
                list(f = "work/train/en_US.twitter.txt", nl = 1416316))
     
+    message("Sampling training data...")
+    
     cr <- iconv(
         unlist(
             lapply(sn, function(z) { sample_lines(z$f, z$nl * sample.pct, z$nl) })
         ), 
         from = "UTF-8")
+    
+    message("Done.")
+    
     cr
 }
 
@@ -70,9 +75,29 @@ calculate_ngrams <- function(tokens) {
         })
         message("Calculated ", n, "-gram table in ", round(t[3], 2), " seconds.")
         
-        d
+        col_sums(d)
     })
 }
+
+filter_ngrams <- function(ngrams, cutoff_ind) {
+    
+    if (length(ngrams) != length(cutoff_ind)) {
+        stop("Lenght of ngram set and cutoffs are different")
+    }
+    
+    r <- list()
+    
+    for (i in seq_along(cutoff_ind)) {
+        if (cutoff_ind[i] != 0) {
+            r[[i]] <- ngrams[[i]][ngrams[[i]] > cutoff_ind[i]]
+        } else {
+            r[[i]] <- ngrams[[i]]
+        }
+    }
+    
+    setNames(r, names(ngrams))
+}
+
 
 # Exports ngrams to .txt files
 export.ngrams <- function(ngrams) {
@@ -87,7 +112,7 @@ export.ngrams <- function(ngrams) {
     
     sapply(seq(1,5), function(g) {
         f <- paste0("work/tables", "/ngram", g, ".txt")
-        write.table(col_sums(ngrams[[g]]), file = f, col.names = FALSE)
+        write.table(ngrams[[g]], file = f, col.names = FALSE)
         message("Exported ", f)
     })
     

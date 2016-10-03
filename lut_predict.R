@@ -104,13 +104,13 @@ guess_word <- function(in.phrase, look.up.tables) {
                         W1 == match_cand[1],
                         W2 == match_cand[2],
                         W3 == match_cand[3],
-                        W4 == match_cand[4]) %>% slice(1:5)
+                        W4 == match_cand[4])
         
         #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
             # Take the top 5 candidates
-            #cands <- cands[1:(min(5, dim(cands)[1])), ]
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             # Find the frequency of the matching 4-gram
             cnt.four_g <- filter(look.up.tables$four,
                                  W1 == match_cand[1],
@@ -146,7 +146,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            #cands <- cands[1:(min(5, dim(cands)[1])), ]
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.three_g <- filter(look.up.tables$three,
                                  W1 == match_cand[1],
                                  W2 == match_cand[2],
@@ -182,7 +182,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            #cands <- cands[1:(min(5, dim(cands)[1])), ]
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.two_g <- filter(look.up.tables$two,
                                   W1 == match_cand[1],
                                   W2 == match_cand[2])$frequency
@@ -217,7 +217,7 @@ guess_word <- function(in.phrase, look.up.tables) {
         #message("  ...found ", dim(cands)[1], " candidates at ", ng+1)
         
         if (dim(cands)[1] > 0) {
-            #cands <- cands[1:(min(5, dim(cands)[1])), ]
+            cands <- cands[1:(min(5, dim(cands)[1])), ]
             cnt.one_g <- filter(look.up.tables$dict,
                                 index == match_cand[1])$frequency
             

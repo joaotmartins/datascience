@@ -33,3 +33,25 @@ Dataset details
 R version 3.3.1 (2016-06-21), platform x86_64-w64-mingw32/x64 (64-bit)
 Attached non-base packages:   quanteda (v0.9.8), dplyr (v0.5.0), data.table (v1.9.6), stringi (v1.0-1), digest (v0.6.9)
 Unattached non-base packages: Rcpp (v0.12.4), lattice (v0.20-33), assertthat (v0.1), chron (v2.3-47), grid (v3.3.1), R6 (v2.1.2), DBI (v0.5-1), magrittr (v1.5), httr (v1.1.0), lazyeval (v0.1.10), ca (v0.64), Matrix (v1.2-6), tools (v3.3.1), parallel (v3.3.1), rsconnect (v0.4.3), compiler (v3.3.1), tibble (v1.2)
+
+####################
+# Optimized LUTs - workstation
+####################
+
+Overall top-3 score:     16.28 %
+Overall top-1 precision: 11.77 %
+Overall top-3 precision: 20.12 %
+Average runtime:         70.16 msec
+Number of predictions:   28464
+Total memory used:       34.82 MB
+
+Dataset details
+ Dataset "blogs" (599 lines, 14587 words, hash 14b3c593e543eb8b2932cf00b646ed653e336897a03c82098b725e6e1f9b7aa2)
+  Score: 16.00 %, Top-1 precision: 11.35 %, Top-3 precision: 19.94 %
+ Dataset "tweets" (793 lines, 14071 words, hash 7fa3bf921c393fe7009bc60971b2bb8396414e7602bb4f409bed78c7192c30f4)
+  Score: 16.55 %, Top-1 precision: 12.19 %, Top-3 precision: 20.30 %
+
+
+R version 3.3.1 (2016-06-21), platform x86_64-w64-mingw32/x64 (64-bit)
+Attached non-base packages:   quanteda (v0.9.8), dplyr (v0.5.0), data.table (v1.9.6), stringi (v1.1.1), digest (v0.6.10), httr (v1.2.1)
+Unattached non-base packages: Rcpp (v0.12.7), lattice (v0.20-33), assertthat (v0.1), chron (v2.3-47), grid (v3.3.1), R6 (v2.1.3), DBI (v0.5), magrittr (v1.5), lazyeval (v0.2.0), ca (v0.64), Matrix (v1.2-6), tools (v3.3.1), compiler (v3.3.1), parallel (v3.3.1), rsconnect (v0.4.3), tibble (v1.2)

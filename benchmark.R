@@ -206,10 +206,6 @@ benchmark <- compiler::cmpfun(function(FUN, ..., sent.list, ext.output=T) {
 ################################################################################################
 
 luts <- import.luts("data")
-luts$five <- luts$five[luts$five$frequency >= 3, ]
-luts$four <- luts$four[luts$four$frequency > 2, ]
-luts$three <- luts$three[luts$three$frequency > 1, ]
-
 
 predict.baseline <- function(x){
     guess_word(x, luts)[1:3, ]$word
